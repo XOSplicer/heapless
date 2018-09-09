@@ -6,6 +6,7 @@ use generic_array::ArrayLength;
 use Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
+#[derive(Clone, Hash)]
 pub struct String<N>
 where
     N: ArrayLength<u8>,
@@ -401,6 +402,15 @@ where
     }
 }
 
+impl<N> Default for String<N>
+where
+    N: ArrayLength<u8>,
+{
+    fn default() -> Self {
+        String::new()
+    }
+}
+
 impl<N> fmt::Debug for String<N>
 where
     N: ArrayLength<u8>,
@@ -710,6 +720,24 @@ mod tests {
         assert!(s.is_empty());
         assert_eq!(0, s.len());
         assert_eq!(8, s.capacity());
+    }
+
+    #[test]
+    fn derive_common() {
+        #[allow(dead_code)]
+        #[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
+        struct Foo {
+            string: String<U4>
+        }
+    }
+
+        #[test]
+    fn clone_is_sane() {
+        let mut a: String<U4> = String::new();
+        a.push_str("1").unwrap();
+        a.push_str("2").unwrap();
+        let b = a.clone();
+        assert_eq!(a, b);
     }
 
 }
