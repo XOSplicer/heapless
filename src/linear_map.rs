@@ -1,5 +1,5 @@
 use core::borrow::Borrow;
-use core::{mem, ops, slice};
+use core::{fmt, mem, ops, slice};
 
 use generic_array::ArrayLength;
 
@@ -8,6 +8,7 @@ use Vec;
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///
 /// Note that as this map doesn't use hashing so most operations are **O(N)** instead of O(1)
+#[derive(Clone)]
 pub struct LinearMap<K, V, N>
 where
     N: ArrayLength<(K, V)>,
@@ -364,6 +365,27 @@ where
     }
 }
 
+impl<K, V, N> Default for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq,
+{
+    fn default() -> Self {
+        LinearMap::new()
+    }
+}
+
+impl<K, V, N> fmt::Debug for LinearMap<K, V, N>
+where
+    N: ArrayLength<(K, V)>,
+    K: Eq + fmt::Debug,
+    V: fmt::Debug
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_map().entries(self.iter()).finish()
+    }
+}
+
 impl<'a, K, V, N, Q> ops::Index<&'a Q> for LinearMap<K, V, N>
 where
     N: ArrayLength<(K, V)>,
@@ -454,6 +476,15 @@ mod test {
     #[test]
     fn static_new() {
         static mut _L: LinearMap<i32, i32, U8>= LinearMap::new();
+    }
+
+    #[test]
+    fn derive_common() {
+        #[allow(dead_code)]
+        #[derive(Clone, Debug, Default)]
+        struct Foo {
+            map: LinearMap<u8, u8, U4>,
+        }
     }
 
 }
