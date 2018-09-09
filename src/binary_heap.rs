@@ -11,7 +11,7 @@
 use core::cmp::Ordering;
 use core::marker::PhantomData;
 use core::mem::ManuallyDrop;
-use core::{mem, ptr, slice};
+use core::{fmt, mem, ptr, slice};
 
 use generic_array::ArrayLength;
 
@@ -412,6 +412,42 @@ impl<'a, T> Drop for Hole<'a, T> {
     }
 }
 
+impl<T, N, K> Default for BinaryHeap<T, N, K>
+where
+    N: ArrayLength<T>,
+    K: Kind,
+    T: Ord,
+{
+    fn default() -> Self {
+        BinaryHeap::new()
+    }
+}
+
+impl<T, N, K> Clone for BinaryHeap<T, N, K>
+where
+    N: ArrayLength<T>,
+    K: Kind,
+    T: Ord + Clone,
+{
+    fn clone(&self) -> Self {
+        BinaryHeap {
+            _kind: PhantomData,
+            data: self.data.clone(),
+        }
+    }
+}
+
+impl<T, N, K> fmt::Debug for BinaryHeap<T, N, K>
+where
+    N: ArrayLength<T>,
+    K: Kind,
+    T: Ord + fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
 impl<'a, T, N, K> IntoIterator for &'a BinaryHeap<T, N, K>
 where
     N: ArrayLength<T>,
@@ -509,5 +545,14 @@ mod tests {
         assert_eq!(heap.pop(), Some(2));
         assert_eq!(heap.pop(), Some(1));
         assert_eq!(heap.pop(), None);
+    }
+
+    #[test]
+    fn derive_common() {
+        #[allow(dead_code)]
+        #[derive(Clone, Debug, Default)]
+        struct Foo {
+            heap: BinaryHeap<u8, U4, binary_heap::Max>,
+        }
     }
 }
