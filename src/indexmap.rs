@@ -751,6 +751,19 @@ where
     }
 }
 
+impl<K, V, N, S> Clone for IndexMap<K, V, N, S>
+where
+    K: Eq + Hash + Clone,
+    V: Clone,
+    S: BuildHasher + Default,
+    N: ArrayLength<Bucket<K, V>> + ArrayLength<Option<Pos>>,
+{
+    fn clone(&self) -> Self {
+        // cant panic, since capacity is the same
+        self.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+    }
+}
+
 impl<K, V, N, S> Extend<(K, V)> for IndexMap<K, V, N, S>
 where
     K: Eq + Hash,
@@ -901,5 +914,14 @@ mod tests {
                 ) + // buckets
                 mem::size_of::<usize>() // entries.length
         )
+    }
+
+    #[test]
+    fn derive_common() {
+        #[allow(dead_code)]
+        #[derive(Clone, Debug, Default)]
+        struct Foo {
+            map: FnvIndexMap<u8, u8, U4>,
+        }
     }
 }
