@@ -817,4 +817,13 @@ mod tests {
             vec: Vec<u8, U4>
         }
     }
+
+    #[test]
+    fn clone_is_sane() {
+        let mut a: Vec<u8, U4> = Vec::new();
+        a.push(0).unwrap();
+        a.push(1).unwrap();
+        let b = a.clone();
+        assert_eq!(a, b);
+    }
 }
