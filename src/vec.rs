@@ -1,4 +1,4 @@
-use core::{fmt, ops, ptr, slice};
+use core::{fmt, ops, ptr, slice, hash};
 
 use generic_array::{ArrayLength, GenericArray};
 
@@ -240,6 +240,38 @@ where
     /* Private API */
     pub(crate) fn is_full(&self) -> bool {
         self.capacity() == self.len()
+    }
+}
+
+impl<T, N> Clone for Vec<T, N>
+where
+    T: Clone,
+    N: ArrayLength<T>,
+{
+    fn clone(&self) -> Self {
+        let mut v = Vec::new();
+        // safe, since self and v have the same capacity
+        v.extend_from_slice(&self[..]).unwrap();
+        v
+    }
+}
+
+impl<T, N> Default for Vec<T, N>
+where
+    N: ArrayLength<T>,
+{
+    fn default() -> Self {
+        Vec::new()
+    }
+}
+
+impl<T, N> hash::Hash for Vec<T, N>
+where
+    T: hash::Hash,
+    N: ArrayLength<T>,
+{
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self[..].hash(state);
     }
 }
 
@@ -775,5 +807,14 @@ mod tests {
         // correct value is being written.
         v.resize_default(1).unwrap();
         assert_eq!(v[0], 0);
+    }
+
+    #[test]
+    fn derive_common() {
+        #[allow(dead_code)]
+        #[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
+        struct Foo {
+            vec: Vec<u8, U4>
+        }
     }
 }
