@@ -478,6 +478,19 @@ where
     }
 }
 
+impl<K, N, S> Clone for IndexSet<K, N, S>
+where
+    K: Eq + Hash + Clone,
+    S: BuildHasher + Default,
+    N: ArrayLength<Bucket<K, ()>> + ArrayLength<Option<Pos>>,
+{
+    fn clone(&self) -> Self {
+        IndexSet {
+            map: self.map.clone()
+        }
+    }
+}
+
 impl<T, N1, N2, S1, S2> PartialEq<IndexSet<T, N2, S2>> for IndexSet<T, N1, S1>
 where
     T: Eq + Hash,
@@ -619,6 +632,21 @@ where
             if self.other.contains(elt) {
                 return Some(elt);
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use consts::*;
+    use FnvIndexSet;
+
+    #[test]
+    fn derive_common() {
+        #[allow(dead_code)]
+        #[derive(Clone, Debug, Default)]
+        struct Foo {
+            map: FnvIndexSet<u8, U4>,
         }
     }
 }
