@@ -446,8 +446,8 @@ where
 #[cfg(feature = "const-fn")] // Remove this if there are more tests
 #[cfg(test)]
 mod test {
-    use consts::*;
-    use LinearMap;
+    use crate::consts::*;
+    use crate::LinearMap;
 
     #[cfg(feature = "const-fn")]
     #[test]
