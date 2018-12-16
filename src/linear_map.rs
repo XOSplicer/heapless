@@ -3,7 +3,7 @@ use core::{mem, ops, slice};
 
 use generic_array::ArrayLength;
 
-use Vec;
+use crate::Vec;
 
 /// A fixed capacity map / dictionary that performs lookups via linear search
 ///

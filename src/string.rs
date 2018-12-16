@@ -3,7 +3,7 @@ use core::{fmt, ops, str};
 
 use generic_array::ArrayLength;
 
-use Vec;
+use crate::Vec;
 
 /// A fixed capacity [`String`](https://doc.rust-lang.org/std/string/struct.String.html)
 pub struct String<N>
@@ -527,8 +527,8 @@ impl<N> Eq for String<N> where N: ArrayLength<u8> {}
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use {String, Vec};
+    use crate::consts::*;
+    use crate::{String, Vec};
 
     #[cfg(feature = "const-fn")]
     #[test]

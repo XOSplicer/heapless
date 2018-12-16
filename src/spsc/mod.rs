@@ -7,8 +7,8 @@ use core::ptr;
 use generic_array::{ArrayLength, GenericArray};
 
 pub use self::split::{Consumer, Producer};
-use __core::mem::MaybeUninit;
-use sealed;
+use crate::__core::mem::MaybeUninit;
+use crate::sealed;
 
 mod split;
 
@@ -455,8 +455,8 @@ iterator!(struct IterMut -> &'a mut T, *mut T, get_mut, as_mut_ptr, make_ref_mut
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use spsc::Queue;
+    use crate::consts::*;
+    use crate::spsc::Queue;
 
     #[cfg(feature = "const-fn")]
     #[test]

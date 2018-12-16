@@ -93,14 +93,14 @@ extern crate std;
 #[macro_use]
 mod const_fn;
 
-pub use binary_heap::BinaryHeap;
+pub use crate::binary_heap::BinaryHeap;
 pub use generic_array::typenum::consts;
 pub use generic_array::ArrayLength;
-pub use indexmap::{FnvIndexMap, IndexMap};
-pub use indexset::{FnvIndexSet, IndexSet};
-pub use linear_map::LinearMap;
-pub use string::String;
-pub use vec::Vec;
+pub use crate::indexmap::{FnvIndexMap, IndexMap};
+pub use crate::indexset::{FnvIndexSet, IndexSet};
+pub use crate::linear_map::LinearMap;
+pub use crate::string::String;
+pub use crate::vec::Vec;
 
 mod cfail;
 mod indexmap;

@@ -3,8 +3,8 @@ use core::ptr::{self, NonNull};
 
 use generic_array::ArrayLength;
 
-use sealed;
-use spsc::{MultiCore, Queue};
+use crate::sealed;
+use crate::spsc::{MultiCore, Queue};
 
 impl<T, N, U, C> Queue<T, N, U, C>
 where
@@ -197,8 +197,8 @@ impl_!(usize);
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use spsc::Queue;
+    use crate::consts::*;
+    use crate::spsc::Queue;
 
     #[test]
     fn sanity() {

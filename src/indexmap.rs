@@ -8,8 +8,8 @@ use generic_array::{ArrayLength, GenericArray};
 
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-use Vec;
-use __core::mem;
+use crate::Vec;
+use crate::__core::mem;
 
 /// An `IndexMap` using the default FNV hasher
 pub type FnvIndexMap<K, V, N> = IndexMap<K, V, N, BuildHasherDefault<FnvHasher>>;
@@ -884,8 +884,8 @@ mod tests {
 
     use generic_array::typenum::Unsigned;
 
-    use consts::*;
-    use FnvIndexMap;
+    use crate::consts::*;
+    use crate::FnvIndexMap;
 
     #[test]
     fn size() {

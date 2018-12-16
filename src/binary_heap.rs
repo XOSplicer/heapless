@@ -15,7 +15,7 @@ use core::{mem, ptr, slice};
 
 use generic_array::ArrayLength;
 
-use Vec;
+use crate::Vec;
 
 /// Min-heap
 pub enum Min {}
@@ -430,8 +430,8 @@ where
 mod tests {
     use std::vec::Vec;
 
-    use binary_heap::{self, BinaryHeap, Min};
-    use consts::*;
+    use crate::binary_heap::{self, BinaryHeap, Min};
+    use crate::consts::*;
 
     #[cfg(feature = "const-fn")]
     #[test]

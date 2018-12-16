@@ -2,7 +2,7 @@ use core::{fmt, ops, ptr, slice};
 
 use generic_array::{ArrayLength, GenericArray};
 
-use __core::mem::MaybeUninit;
+use crate::__core::mem::MaybeUninit;
 
 use core::iter::FromIterator;
 
@@ -507,8 +507,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use consts::*;
-    use Vec;
+    use crate::consts::*;
+    use crate::Vec;
 
     #[cfg(feature = "const-fn")]
     #[test]

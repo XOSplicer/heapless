@@ -6,7 +6,7 @@ use generic_array::typenum::PowerOfTwo;
 use generic_array::ArrayLength;
 use hash32::{BuildHasher, BuildHasherDefault, FnvHasher, Hash, Hasher};
 
-use indexmap::{self, Bucket, IndexMap, Pos};
+use crate::indexmap::{self, Bucket, IndexMap, Pos};
 
 /// An `IndexSet` using the default FNV hasher
 pub type FnvIndexSet<T, N> = IndexSet<T, N, BuildHasherDefault<FnvHasher>>;

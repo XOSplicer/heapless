@@ -2,7 +2,7 @@ use core::sync::atomic::{self, AtomicUsize, Ordering};
 #[cfg(feature = "smaller-atomics")]
 use core::sync::atomic::{AtomicU16, AtomicU8};
 
-use spsc::{MultiCore, SingleCore};
+use crate::spsc::{MultiCore, SingleCore};
 
 pub unsafe trait XCore {
     fn is_multi_core() -> bool;

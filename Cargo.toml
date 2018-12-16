@@ -17,6 +17,7 @@ license = "MIT OR Apache-2.0"
 name = "heapless"
 repository = "https://github.com/japaric/heapless"
 version = "0.4.1"
+edition = "2018"
 
 [features]
 const-fn = []
