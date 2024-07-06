@@ -540,11 +540,352 @@ where
 {
 }
 
+impl<K, V, S> LinearMapInner<K, V, S>
+where
+    S: Storage,
+    K: Eq,
+{
+    /// Returns an entry for the corresponding key
+    /// ```
+    /// use heapless::LinearMap;
+    /// use heapless::linear_map::Entry;
+    /// let mut map = LinearMap::<_, _, 16>::new();
+    /// if let Entry::Vacant(v) = map.entry("a") {
+    ///     v.insert(1).unwrap();
+    /// }
+    /// if let Entry::Occupied(mut o) = map.entry("a") {
+    ///     println!("found {}", *o.get()); // Prints 1
+    ///     o.insert(2);
+    /// }
+    /// // Prints 2
+    /// println!("val: {}", *map.get("a").unwrap());
+    /// ```
+    pub fn entry(&mut self, key: K) -> Entry<'_, K, V, S> {
+        let idx_opt = self
+            .keys()
+            .enumerate()
+            .find(|&(_, k)| k == &key)
+            .map(|(idx, _)| idx);
+        match idx_opt {
+            Some(idx) => Entry::Occupied(OccupiedEntry {
+                key,
+                idx,
+                map: self,
+            }),
+            None => Entry::Vacant(VacantEntry { key, map: self }),
+        }
+    }
+}
+
+/// A view into an entry in the map
+pub enum Entry<'a, K, V, S: Storage> {
+    /// The entry corresponding to the key `K` exists in the map
+    Occupied(OccupiedEntry<'a, K, V, S>),
+    /// The entry corresponding to the key `K` does not exist in the map
+    Vacant(VacantEntry<'a, K, V, S>),
+}
+
+impl<'a, K, V, S> Entry<'a, K, V, S>
+where
+    S: Storage,
+    K: Eq,
+{
+    /// Ensures a value is in the entry by inserting the default if empty, and
+    /// returns a mutable reference to the value in the entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut book_reviews: LinearMap<_, _, 16> = LinearMap::new();
+    ///
+    /// let result = book_reviews
+    ///     .entry("Adventures of Huckleberry Finn")
+    ///     .or_insert("My favorite book.");
+    ///
+    /// assert_eq!(result, Ok(&mut "My favorite book."));
+    /// assert_eq!(
+    ///     book_reviews["Adventures of Huckleberry Finn"],
+    ///     "My favorite book."
+    /// );
+    /// ```
+    pub fn or_insert(self, default: V) -> Result<&'a mut V, (K, V)> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => entry.insert(default),
+        }
+    }
+
+    /// Ensures a value is in the entry by inserting the result of the default
+    /// function if empty, and returns a mutable reference to the value in the
+    /// entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut book_reviews: LinearMap<_, _, 16> = LinearMap::new();
+    ///
+    /// let s = "Masterpiece.".to_string();
+    ///
+    /// book_reviews
+    ///     .entry("Grimms' Fairy Tales")
+    ///     .or_insert_with(|| s);
+    ///
+    /// assert_eq!(
+    ///     book_reviews["Grimms' Fairy Tales"],
+    ///     "Masterpiece.".to_string()
+    /// );
+    /// ```
+    pub fn or_insert_with<F: FnOnce() -> V>(self, default: F) -> Result<&'a mut V, (K, V)> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => entry.insert(default()),
+        }
+    }
+
+    /// Ensures a value is in the entry by inserting, if empty, the result of
+    /// the default function. This method allows for generating key-derived
+    /// values for insertion by providing the default function a reference to
+    /// the key that was moved during the `.entry(key)` method call.
+    ///
+    /// The reference to the moved key is provided so that cloning or copying
+    /// the key is unnecessary, unlike with `.or_insert_with(|| ... )`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut book_reviews: LinearMap<_, _, 16> = LinearMap::new();
+    ///
+    ///
+    /// book_reviews
+    ///     .entry("Pride and Prejudice")
+    ///     .or_insert_with_key(|key| key.chars().count());
+    ///
+    /// assert_eq!(book_reviews["Pride and Prejudice"], 19);
+    /// ```
+    pub fn or_insert_with_key<F: FnOnce(&K) -> V>(self, default: F) -> Result<&'a mut V, (K, V)> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => {
+                let value = default(entry.key());
+                entry.insert(value)
+            }
+        }
+    }
+
+    /// Returns a reference to this entry's key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut book_reviews: LinearMap<&str, &str, 16> = LinearMap::new();
+    /// assert_eq!(
+    ///     book_reviews
+    ///         .entry("The Adventures of Sherlock Holmes")
+    ///         .key(),
+    ///     &"The Adventures of Sherlock Holmes"
+    /// );
+    /// ```
+    pub fn key(&self) -> &K {
+        match *self {
+            Self::Occupied(ref entry) => entry.key(),
+            Self::Vacant(ref entry) => entry.key(),
+        }
+    }
+
+    /// Consumes this entry to yield to key associated with it
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut book_reviews: LinearMap<u32, &str, 16> = LinearMap::new();
+    /// assert_eq!(
+    ///     book_reviews
+    ///         .entry(42)
+    ///         .into_key(),
+    ///     42
+    /// );
+    /// ```
+    pub fn into_key(self) -> K {
+        match self {
+            Self::Occupied(entry) => entry.into_key(),
+            Self::Vacant(entry) => entry.into_key(),
+        }
+    }
+
+    /// Provides in-place mutable access to an occupied entry before any
+    /// potential inserts into the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut book_reviews: LinearMap<_, _, 16> = LinearMap::new();
+    ///
+    /// book_reviews
+    ///     .entry("Grimms' Fairy Tales")
+    ///     .and_modify(|e| *e = "Masterpiece.")
+    ///     .or_insert("Very enjoyable.");
+    /// assert_eq!(book_reviews["Grimms' Fairy Tales"], "Very enjoyable.");
+    /// ```
+    pub fn and_modify<F>(self, f: F) -> Self
+    where
+        F: FnOnce(&mut V),
+    {
+        match self {
+            Self::Occupied(mut entry) => {
+                f(entry.get_mut());
+                Self::Occupied(entry)
+            }
+            Self::Vacant(entry) => Self::Vacant(entry),
+        }
+    }
+}
+
+impl<'a, K, V, S> Entry<'a, K, V, S>
+where
+    S: Storage,
+    K: Eq,
+    V: Default,
+{
+    /// Ensures a value is in the entry by inserting the default value if empty,
+    /// and returns a mutable reference to the value in the entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use heapless::LinearMap;
+    ///
+    /// // allocate the map on the stack
+    /// let mut book_reviews: LinearMap<&str, Option<&str>, 16> = LinearMap::new();
+    ///
+    /// book_reviews.entry("Pride and Prejudice").or_default();
+    ///
+    /// assert_eq!(book_reviews["Pride and Prejudice"], None);
+    /// ```
+    #[inline]
+    pub fn or_default(self) -> Result<&'a mut V, (K, V)> {
+        match self {
+            Self::Occupied(entry) => Ok(entry.into_mut()),
+            Self::Vacant(entry) => entry.insert(Default::default()),
+        }
+    }
+}
+
+/// An occupied entry which can be manipulated
+pub struct OccupiedEntry<'a, K, V, S: Storage> {
+    key: K,
+    // The index in the buffer where the key was found.
+    // OccupiedEntry holds an exclusive reference to the map so this index is
+    // valid for OccupiedEntry's lifetime and can be used to access the buffer
+    // without checking bounds again.
+    idx: usize,
+    map: &'a mut LinearMapInner<K, V, S>,
+}
+
+impl<'a, K, V, S> OccupiedEntry<'a, K, V, S>
+where
+    S: Storage,
+    K: Eq,
+{
+    /// Gets a reference to the key that this entity corresponds to
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    /// Consumes this entry to yield to key associated with it
+    pub fn into_key(self) -> K {
+        self.key
+    }
+
+    /// Removes this entry from the map and yields its corresponding key and value
+    pub fn remove_entry(self) -> (K, V) {
+        // SAFETY: idx has been returned by find() and therefore is inbounds
+        unsafe { self.map.buffer.swap_remove_unchecked(self.idx) }
+    }
+
+    /// Removes this entry from the map and yields its value
+    pub fn remove(self) -> V {
+        self.remove_entry().1
+    }
+
+    /// Gets a reference to the value associated with this entry
+    pub fn get(&self) -> &V {
+        // SAFETY: idx has been returned by find() and therefore is inbounds
+        unsafe { &self.map.buffer.get_unchecked(self.idx).1 }
+    }
+
+    /// Gets a mutable reference to the value associated with this entry
+    pub fn get_mut(&mut self) -> &mut V {
+        // SAFETY: idx has been returned by find() and therefore is inbounds
+        unsafe { &mut self.map.buffer.get_unchecked_mut(self.idx).1 }
+    }
+
+    /// Consumes this entry and yields a reference to the underlying value
+    pub fn into_mut(self) -> &'a mut V {
+        // SAFETY: idx has been returned by find() and therefore is inbounds
+        unsafe { &mut self.map.buffer.get_unchecked_mut(self.idx).1 }
+    }
+
+    /// Overwrites the underlying map's value with this entry's value
+    pub fn insert(self, value: V) -> V {
+        mem::replace(self.into_mut(), value)
+    }
+}
+
+/// A view into an empty slot in the underlying map
+pub struct VacantEntry<'a, K, V, S: Storage> {
+    key: K,
+    map: &'a mut LinearMapInner<K, V, S>,
+}
+
+impl<'a, K, V, S> VacantEntry<'a, K, V, S>
+where
+    S: Storage,
+    K: Eq,
+{
+    /// Get the key associated with this entry
+    pub fn key(&self) -> &K {
+        &self.key
+    }
+
+    /// Consumes this entry to yield to key associated with it
+    pub fn into_key(self) -> K {
+        self.key
+    }
+
+    /// Inserts this entry into to underlying map, yields a mutable reference to the inserted value.
+    /// If the map is at capacity the value and key are returned instead.
+    pub fn insert(self, value: V) -> Result<&'a mut V, (K, V)> {
+        // NOTE: Already checked that no other entry exists
+        self.map.buffer.push((self.key, value)).map(|()| unsafe {
+            // SAFETY: We just pushed to this vec, so last_mut() will never return Err
+            &mut self.map.buffer.last_mut().unwrap_unchecked().1
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
     use static_assertions::assert_not_impl_any;
 
-    use super::LinearMap;
+    use super::{Entry, LinearMap, Vec};
 
     // Ensure a `LinearMap` containing `!Send` keys stays `!Send` itself.
     assert_not_impl_any!(LinearMap<*const (), (), 4>: Send);
@@ -618,5 +959,243 @@ mod test {
         for (k, v) in clone.into_iter() {
             assert_eq!(v, src.remove(k).unwrap());
         }
+    }
+
+    #[test]
+    fn entry_or_insert() {
+        let mut a: LinearMap<_, _, 2> = LinearMap::new();
+        a.entry("k1").or_insert("v1").unwrap();
+        assert_eq!(a["k1"], "v1");
+
+        a.entry("k2").or_insert("v2").unwrap();
+        assert_eq!(a["k2"], "v2");
+
+        let result = a.entry("k3").or_insert("v3");
+        assert_eq!(result, Err(("k3", "v3")));
+    }
+
+    #[test]
+    fn entry_or_insert_with() {
+        let mut a: LinearMap<_, _, 2> = LinearMap::new();
+        a.entry("k1").or_insert_with(|| "v1").unwrap();
+        assert_eq!(a["k1"], "v1");
+
+        a.entry("k2").or_insert_with(|| "v2").unwrap();
+        assert_eq!(a["k2"], "v2");
+
+        let result = a.entry("k3").or_insert_with(|| "v3");
+        assert_eq!(result, Err(("k3", "v3")));
+    }
+
+    #[test]
+    fn entry_or_insert_with_key() {
+        let mut a: LinearMap<_, _, 2> = LinearMap::new();
+        a.entry("k1")
+            .or_insert_with_key(|key| key.chars().count())
+            .unwrap();
+        assert_eq!(a["k1"], 2);
+
+        a.entry("k22")
+            .or_insert_with_key(|key| key.chars().count())
+            .unwrap();
+        assert_eq!(a["k22"], 3);
+
+        let result = a.entry("k3").or_insert_with_key(|key| key.chars().count());
+        assert_eq!(result, Err(("k3", 2)));
+    }
+
+    #[test]
+    fn entry_key() {
+        let mut a: LinearMap<&str, &str, 2> = LinearMap::new();
+
+        assert_eq!(a.entry("k1").key(), &"k1");
+    }
+
+    #[test]
+    fn entry_and_modify() {
+        let mut a: LinearMap<&str, &str, 2> = LinearMap::new();
+        a.insert("k1", "v1").unwrap();
+        a.entry("k1").and_modify(|e| *e = "modified v1");
+
+        assert_eq!(a["k1"], "modified v1");
+
+        a.entry("k2")
+            .and_modify(|e| *e = "v2")
+            .or_insert("default v2")
+            .unwrap();
+
+        assert_eq!(a["k2"], "default v2");
+    }
+
+    #[test]
+    fn entry_or_default() {
+        let mut a: LinearMap<&str, Option<u32>, 2> = LinearMap::new();
+        a.entry("k1").or_default().unwrap();
+
+        assert_eq!(a["k1"], None);
+
+        let mut b: LinearMap<&str, u8, 2> = LinearMap::new();
+        b.entry("k2").or_default().unwrap();
+
+        assert_eq!(b["k2"], 0);
+    }
+
+    const MAP_SLOTS: usize = 64;
+    fn almost_filled_map() -> LinearMap<usize, usize, MAP_SLOTS> {
+        // Create the inner buffer directly to skip linear search on every insert
+        let mut buffer: Vec<(usize, usize), MAP_SLOTS> = Vec::new();
+        for i in 1..MAP_SLOTS {
+            // SAFETY: buffer can hold MAP_SLOTS items, and MAP_SLOTS-1 are pushed
+            unsafe {
+                buffer.push_unchecked((i, i));
+            }
+        }
+        LinearMap { buffer }
+    }
+
+    #[test]
+    fn entry_find() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Found entry without inserting");
+            }
+            Entry::Vacant(v) => {
+                assert_eq!(&key, v.key());
+                assert_eq!(key, v.into_key());
+            }
+        }
+        src.insert(key, value).unwrap();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(mut o) => {
+                assert_eq!(&key, o.key());
+                assert_eq!(&value, o.get());
+                assert_eq!(&value, o.get_mut());
+                assert_eq!(&value, o.into_mut());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        }
+    }
+
+    #[test]
+    fn entry_vacant_insert() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        assert_eq!(MAP_SLOTS - 1, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(_) => {
+                panic!("Entry found when empty");
+            }
+            Entry::Vacant(v) => {
+                assert_eq!(value, *v.insert(value).unwrap());
+            }
+        };
+        assert_eq!(value, *src.get(&key).unwrap())
+    }
+
+    #[test]
+    fn entry_occupied_insert() {
+        let key = 0;
+        let value = 0;
+        let value2 = 5;
+        let mut src = almost_filled_map();
+        assert_eq!(MAP_SLOTS - 1, src.len());
+        src.insert(key, value).unwrap();
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!(value, o.insert(value2));
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        };
+        assert_eq!(value2, *src.get(&key).unwrap())
+    }
+
+    #[test]
+    fn entry_remove_entry() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!((key, value), o.remove_entry());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found")
+            }
+        };
+        assert_eq!(MAP_SLOTS - 1, src.len());
+    }
+
+    #[test]
+    fn entry_remove() {
+        let key = 0;
+        let value = 0;
+        let mut src = almost_filled_map();
+        src.insert(key, value).unwrap();
+        assert_eq!(MAP_SLOTS, src.len());
+        let entry = src.entry(key);
+        match entry {
+            Entry::Occupied(o) => {
+                assert_eq!(value, o.remove());
+            }
+            Entry::Vacant(_) => {
+                panic!("Entry not found");
+            }
+        };
+        assert_eq!(MAP_SLOTS - 1, src.len());
+    }
+
+    #[test]
+    fn entry_roll_through_all() {
+        let mut src: LinearMap<usize, usize, MAP_SLOTS> = LinearMap::new();
+        for i in 0..MAP_SLOTS {
+            match src.entry(i) {
+                Entry::Occupied(_) => {
+                    panic!("Entry found before insert");
+                }
+                Entry::Vacant(v) => {
+                    assert_eq!(i, *v.insert(i).unwrap());
+                }
+            }
+        }
+        let add_mod = 99;
+        for i in 0..MAP_SLOTS {
+            match src.entry(i) {
+                Entry::Occupied(o) => {
+                    assert_eq!(i, o.insert(i + add_mod));
+                }
+                Entry::Vacant(_) => {
+                    panic!("Entry not found after insert");
+                }
+            }
+        }
+        for i in 0..MAP_SLOTS {
+            match src.entry(i) {
+                Entry::Occupied(o) => {
+                    assert_eq!((i, i + add_mod), o.remove_entry());
+                }
+                Entry::Vacant(_) => {
+                    panic!("Entry not found after insert");
+                }
+            }
+        }
+        for i in 0..MAP_SLOTS {
+            assert!(matches!(src.entry(i), Entry::Vacant(_)));
+        }
+        assert!(src.is_empty());
     }
 }
